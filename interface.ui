@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>9184756.png</normaloff>9184756.png</iconset>
+  </property>
   <property name="styleSheet">
    <string notr="true">#centralwidget {
 	background-color: black;

@@ -2,16 +2,27 @@ from PyQt5.QtWidgets import QMainWindow, QShortcut
 from PyQt5.uic import loadUi
 from PyQt5.QtGui import QKeySequence
 from funcoes import somar, subtrair, dividir, multiplicar, porcentagem
+from PyQt5.QtCore import pyqtSlot, QTimer
+
+
+from os import path
+import sys
+
+def loadFile(file):
+    base_path = getattr(sys, "_MEIPASS", path.dirname(path.abspath(__file__)))
+    return path.join(base_path, file)
 
 class MainUI(QMainWindow):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        loadUi("interface.ui", self)
+        loadUi(loadFile("interface.ui"), self)
         self.show()
 
 
         self.num1 = 0
         self.num2 = 0
+        self.finish = False
+
         self.selectedOperation = None
         self.operationList = {
             "+": somar,
@@ -44,6 +55,34 @@ class MainUI(QMainWindow):
         self.btn_divisao.clicked.connect(lambda : self.setOperation("÷"))
         self.btn_porcento.clicked.connect(lambda : self.setOperation("%"))
 
+    def timerClean(self):
+        self.btn_adicao.setEnabled(False)
+        self.btn_divisao.setEnabled(False)
+        self.btn_subtracao.setEnabled(False)
+        self.btn_multiplicacao.setEnabled(False)
+        self.btn_porcento.setEnabled(False)
+        self.btn_maismenos.setEnabled(False)
+        self.btn_igual.setEnabled(False)
+        self.btn_virgula.setEnabled(False)
+        self.cronometro = QTimer(self)
+        self.cronometro.timeout.connect(self.cleanDisplay)
+        self.cronometro.singleShot(1000, self.cleanDisplay)
+        self.cronometro.singleShot(1000, self.timeOutClean)
+
+    def timeOutClean(self):
+        self.btn_adicao.setEnabled(True)
+        self.btn_divisao.setEnabled(True)
+        self.btn_subtracao.setEnabled(True)
+        self.btn_multiplicacao.setEnabled(True)
+        self.btn_porcento.setEnabled(True)
+        self.btn_maismenos.setEnabled(True)
+        self.btn_igual.setEnabled(True)
+        self.btn_virgula.setEnabled(True)
+        self.resultado.setText("0")
+        self.resultado2.setText("0")
+        self.num1 = 0
+        self.num2 = 0
+        self.selectedOperation = None
 
     def addComma(self):
         ultimo = self.resultado.text()
@@ -53,11 +92,11 @@ class MainUI(QMainWindow):
             display = ultimo + ","
         self.resultado.setText(display) 
 
-
     def addNumber(self, numero):
         self.btn_ac.setText("<-")
         ultimo = self.resultado.text()
-        if ultimo == '0':
+        if ultimo == '0' or self.finish:
+            self.finish = False
             resultado = str(numero)
         else:
             resultado = ultimo + str(numero)
@@ -67,6 +106,7 @@ class MainUI(QMainWindow):
         if self.btn_ac.text() == "AC":
             self.resultado.setText("0")
             self.resultado2.setText("0")
+            self.num1 = 0
             self.num2 = 0
         else:
             ultimo = self.resultado.text()[:-1]
@@ -76,9 +116,9 @@ class MainUI(QMainWindow):
             self.resultado.setText(ultimo)
 
     def reverseDisplay(self):
-        numero = int(self.resultado.text())
+        numero = self.getNumberDisplay(self.resultado)
         numero = str(numero * - 1)
-        self.resultado.setText(numero)
+        self.setNumberDisplay(numero)
 
     def percent(self):
         percent = self.getNumberDisplay(self.resultado)
@@ -116,23 +156,23 @@ class MainUI(QMainWindow):
         
 
     def showResult(self):
-        if self.num2 == 0:
-            self.num2 = self.getNumberDisplay(self.resultado)
+        if self.selectedOperation:
+            if self.num2 == 0:
+                self.num2 = self.getNumberDisplay(self.resultado)
 
-        #num1 = self.getNumberDisplay(self.resultado)
-        #num2 = self.getNumberDisplay(self.resultado2)
+            num1 = self.num1
+            num2 = self.num2
 
+            operation = self.operationList.get(self.selectedOperation)
+            result = operation(num1, num2)
+            self.num1 = result
 
-        num1 = self.num1
-        num2 = self.num2
-
-        operation = self.operationList.get(self.selectedOperation)
-        result = operation(num1, num2)
-        self.num1 = result
-
-        self.setNumberDisplay(result)
-        self.setCalcDisplay(num1, num2, self.selectedOperation)
-        self.btn_ac.setText("AC")
+            self.setNumberDisplay(result)
+            self.setCalcDisplay(num1, num2, self.selectedOperation)
+            self.btn_ac.setText("AC")
+            self.finish = True
+            if isinstance(result, str):
+                self.timerClean()
 
 
 
